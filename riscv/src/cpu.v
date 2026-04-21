@@ -12,7 +12,7 @@ module cpu(
 
     // Memory Controller State
     reg [2:0] mc_state;
-    localparam MC_IDLE = 0, MC_READ = 1, MC_READ_LAST = 2, MC_WRITE = 3;
+    localparam MC_IDLE = 0, MC_READ = 1, MC_WRITE = 2;
     reg [2:0] mc_cnt, mc_target;
     reg [31:0] mc_addr, mc_data_reg;
     reg mc_is_if;
@@ -144,7 +144,7 @@ module cpu(
                         mc_if_done <= 0; mc_lsb_done <= 0;
                         if (lsb_count > 0 && !lsb_addr_ready[lsb_head] && !lsb_has_q1[lsb_head]) begin
                             lsb_addr_val[lsb_head] <= lsb_v1[lsb_head] + lsb_imm[lsb_head]; lsb_addr_ready[lsb_head] <= 1;
-                        end else if (lsb_count > 0 && lsb_addr_ready[lsb_head] && (!lsb_op[lsb_head][3] || lsb_rob_id[lsb_head] == rob_head)) begin
+                        end else if (lsb_count > 0 && lsb_addr_ready[lsb_head] && (lsb_op[lsb_head] < 16 || lsb_rob_id[lsb_head] == rob_head)) begin
                             mc_addr <= lsb_addr_val[lsb_head];
                             mc_target <= (lsb_op[lsb_head] == 6'd13 || lsb_op[lsb_head] == 6'd18) ? 4 : (lsb_op[lsb_head] == 6'd12 || lsb_op[lsb_head] == 6'd15 || lsb_op[lsb_head] == 6'd17) ? 2 : 1;
                             if (lsb_op[lsb_head] >= 16) begin
@@ -160,13 +160,11 @@ module cpu(
                     end
                     MC_READ: begin
                         if (mc_cnt > 0) mc_data_reg[((mc_cnt-1)*8)+:8] <= mem_din;
-                        if (mc_cnt == mc_target) begin mc_state <= MC_READ_LAST; mem_a <= 0; end
-                        else begin mem_a <= mc_addr + mc_cnt + 1; mc_cnt <= mc_cnt + 1; end
-                    end
-                    MC_READ_LAST: begin
-                        mc_data_reg[((mc_target-1)*8)+:8] <= mem_din; mc_state <= MC_IDLE;
-                        if (mc_is_if) begin mc_if_done <= 1; mc_if_data <= {mc_data_reg[23:0], mem_din}; mc_is_if <= 0; end
-                        else begin mc_lsb_done <= 1; mc_lsb_rdata <= {mem_din, mc_data_reg[23:0]}; end
+                        if (mc_cnt == mc_target) begin
+                            mc_state <= MC_IDLE; mem_a <= 0;
+                            if (mc_is_if) begin mc_if_done <= 1; mc_if_data <= {mc_data_reg[23:0], mem_din}; mc_is_if <= 0; end
+                            else begin mc_lsb_done <= 1; mc_lsb_rdata <= {mem_din, mc_data_reg[23:0]}; end
+                        end else begin mem_a <= mc_addr + mc_cnt + 1; mc_cnt <= mc_cnt + 1; end
                     end
                     MC_WRITE: begin
                         if (mc_cnt == mc_target) begin mc_state <= MC_IDLE; mem_a <= 0; mem_wr <= 0; mc_lsb_done <= 1; end
