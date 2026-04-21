@@ -162,7 +162,7 @@ module cpu(
                         if (mc_cnt > 0) mc_data_reg[((mc_cnt-1)*8)+:8] <= mem_din;
                         if (mc_cnt == mc_target) begin
                             mc_state <= MC_IDLE; mem_a <= 0;
-                            if (mc_is_if) begin mc_if_done <= 1; mc_if_data <= {mc_data_reg[23:0], mem_din}; mc_is_if <= 0; end
+                            if (mc_is_if) begin mc_if_done <= 1; mc_if_data <= {mem_din, mc_data_reg[23:0]}; mc_is_if <= 0; end
                             else begin mc_lsb_done <= 1; mc_lsb_rdata <= {mem_din, mc_data_reg[23:0]}; end
                         end else begin mem_a <= mc_addr + mc_cnt + 1; mc_cnt <= mc_cnt + 1; end
                     end
