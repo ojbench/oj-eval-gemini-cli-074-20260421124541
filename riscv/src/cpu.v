@@ -45,6 +45,7 @@ module cpu(
     reg [5:0] rs_op[0:RS_SIZE-1];
     reg [31:0] rs_v1[0:RS_SIZE-1], rs_v2[0:RS_SIZE-1], rs_imm[0:RS_SIZE-1], rs_pc[0:RS_SIZE-1];
     reg [3:0] rs_q1[0:RS_SIZE-1], rs_q2[0:RS_SIZE-1], rs_rob_id[0:RS_SIZE-1];
+    reg rs_is_rv32c[0:RS_SIZE-1];
 
     // LSB State
     localparam LSB_SIZE = 16;
@@ -204,8 +205,8 @@ module cpu(
                     case (rs_op[i])
                         6'd1: cdb_val <= rs_imm[i]; // LUI
                         6'd2: cdb_val <= rs_pc[i] + rs_imm[i]; // AUIPC
-                        6'd3: cdb_val <= rs_pc[i] + (rs_imm[i][31] ? 2 : 4); // JAL
-                        6'd4: begin cdb_val <= rs_pc[i] + (rs_imm[i][31] ? 2 : 4); cdb_target_pc <= (rs_v1[i] + rs_imm[i]) & ~32'h1; cdb_mispredict <= 1; end // JALR
+                        6'd3: begin cdb_val <= rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_target_pc <= rs_pc[i] + rs_imm[i]; cdb_mispredict <= 1; end // JAL
+                        6'd4: begin cdb_val <= rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_target_pc <= (rs_v1[i] + rs_imm[i]) & ~32'h1; cdb_mispredict <= 1; end // JALR
                         6'd5: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] == rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= (rs_v1[i] == rs_v2[i]); end // BEQ
                         6'd6: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] != rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= (rs_v1[i] != rs_v2[i]); end // BNE
                         6'd7: begin cdb_val <= 0; cdb_target_pc <= ($signed(rs_v1[i]) < $signed(rs_v2[i])) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= ($signed(rs_v1[i]) < $signed(rs_v2[i])); end // BLT
@@ -259,8 +260,8 @@ module cpu(
                     case (d_inst[6:0])
                         7'b0110111: begin op = 6'd1; imm = {d_inst[31:12], 12'b0}; end
                         7'b0010111: begin op = 6'd2; imm = {d_inst[31:12], 12'b0}; end
-                        7'b1101111: begin op = 6'd3; imm = {{12{d_inst[31]}}, d_inst[19:12], d_inst[20], d_inst[30:21], 1'b0}; imm[31] = (inst[1:0] != 2'b11); end
-                        7'b1100111: begin op = 6'd4; imm = {{20{d_inst[31]}}, d_inst[31:20]}; imm[31] = (inst[1:0] != 2'b11); end
+                        7'b1101111: begin op = 6'd3; imm = {{12{d_inst[31]}}, d_inst[19:12], d_inst[20], d_inst[30:21], 1'b0}; end
+                        7'b1100111: begin op = 6'd4; imm = {{20{d_inst[31]}}, d_inst[31:20]}; end
                         7'b1100011: begin imm = {{20{d_inst[31]}}, d_inst[7], d_inst[30:25], d_inst[11:8], 1'b0}; case (d_inst[14:12]) 3'b000: op = 6'd5; 3'b001: op = 6'd6; 3'b100: op = 6'd7; 3'b101: op = 6'd8; 3'b110: op = 6'd9; 3'b111: op = 6'd10; endcase end
                         7'b0000011: begin imm = {{20{d_inst[31]}}, d_inst[31:20]}; case (d_inst[14:12]) 3'b000: op = 6'd11; 3'b001: op = 6'd12; 3'b010: op = 6'd13; 3'b100: op = 6'd14; 3'b101: op = 6'd15; endcase end
                         7'b0100011: begin imm = {{20{d_inst[31]}}, d_inst[31:25], d_inst[11:7]}; case (d_inst[14:12]) 3'b000: op = 6'd16; 3'b001: op = 6'd17; 3'b010: op = 6'd18; endcase end
@@ -282,7 +283,7 @@ module cpu(
                                 else begin lsb_v2[lsb_tail] <= rf_val[rs2]; lsb_has_q2[lsb_tail] <= 0; end
                                 lsb_tail <= (lsb_tail + 1) % LSB_SIZE; lsb_count <= lsb_count + 1;
                             end else begin
-                                rs_busy[free_rs] <= 1; rs_op[free_rs] <= op; rs_imm[free_rs] <= imm; rs_rob_id[free_rs] <= rob_tail; rs_pc[free_rs] <= inst_pc;
+                                rs_busy[free_rs] <= 1; rs_op[free_rs] <= op; rs_imm[free_rs] <= imm; rs_rob_id[free_rs] <= rob_tail; rs_pc[free_rs] <= inst_pc; rs_is_rv32c[free_rs] <= (inst[1:0] != 2'b11);
                                 if (rf_busy[rs1]) begin if (rob_ready[rf_rob_id[rs1]]) begin rs_v1[free_rs] <= rob_val[rf_rob_id[rs1]]; rs_has_q1[free_rs] <= 0; end else begin rs_q1[free_rs] <= rf_rob_id[rs1]; rs_has_q1[free_rs] <= 1; end end
                                 else begin rs_v1[free_rs] <= rf_val[rs1]; rs_has_q1[free_rs] <= 0; end
                                 if (rf_busy[rs2]) begin if (rob_ready[rf_rob_id[rs2]]) begin rs_v2[free_rs] <= rob_val[rf_rob_id[rs2]]; rs_has_q2[free_rs] <= 0; end else begin rs_q2[free_rs] <= rf_rob_id[rs2]; rs_has_q2[free_rs] <= 1; end end
