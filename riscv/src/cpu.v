@@ -198,9 +198,10 @@ module cpu(
 
                 // 5. Execute RS
                 cdb_valid <= 0; rs_found = 0;
-                for (i=0; i<RS_SIZE; i=i+1) if (rs_busy[i] && !rs_has_q1[i] && !rs_has_q2[i] && !rs_found) begin
-                    rs_busy[i] <= 0; cdb_valid <= 1; cdb_rob_id <= rs_rob_id[i]; cdb_mispredict <= 0; rs_found = 1;
-                    case (rs_op[i])
+                if (!mc_lsb_done || lsb_op[lsb_head] >= 16) begin
+                    for (i=0; i<RS_SIZE; i=i+1) if (rs_busy[i] && !rs_has_q1[i] && !rs_has_q2[i] && !rs_found) begin
+                        rs_busy[i] <= 0; cdb_valid <= 1; cdb_rob_id <= rs_rob_id[i]; cdb_mispredict <= 0; rs_found = 1;
+                        case (rs_op[i])
                         6'd1: cdb_val <= rs_imm[i]; // LUI
                         6'd2: cdb_val <= rs_pc[i] + rs_imm[i]; // AUIPC
                         6'd3: begin cdb_val <= rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_target_pc <= rs_pc[i] + rs_imm[i]; cdb_mispredict <= 1; end // JAL
