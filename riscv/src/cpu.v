@@ -205,12 +205,12 @@ module cpu(
                         6'd2: cdb_val <= rs_pc[i] + rs_imm[i]; // AUIPC
                         6'd3: begin cdb_val <= rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_target_pc <= rs_pc[i] + rs_imm[i]; cdb_mispredict <= 1; end // JAL
                         6'd4: begin cdb_val <= rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_target_pc <= (rs_v1[i] + rs_imm[i]) & ~32'h1; cdb_mispredict <= 1; end // JALR
-                        6'd5: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] == rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= (rs_v1[i] == rs_v2[i]); end // BEQ
-                        6'd6: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] != rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= (rs_v1[i] != rs_v2[i]); end // BNE
-                        6'd7: begin cdb_val <= 0; cdb_target_pc <= ($signed(rs_v1[i]) < $signed(rs_v2[i])) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= ($signed(rs_v1[i]) < $signed(rs_v2[i])); end // BLT
-                        6'd8: begin cdb_val <= 0; cdb_target_pc <= ($signed(rs_v1[i]) >= $signed(rs_v2[i])) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= ($signed(rs_v1[i]) >= $signed(rs_v2[i])); end // BGE
-                        6'd9: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] < rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= (rs_v1[i] < rs_v2[i]); end // BLTU
-                        6'd10: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] >= rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + 4; cdb_mispredict <= (rs_v1[i] >= rs_v2[i]); end // BGEU
+                        6'd5: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] == rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_mispredict <= (rs_v1[i] == rs_v2[i]); end // BEQ
+                        6'd6: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] != rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_mispredict <= (rs_v1[i] != rs_v2[i]); end // BNE
+                        6'd7: begin cdb_val <= 0; cdb_target_pc <= ($signed(rs_v1[i]) < $signed(rs_v2[i])) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_mispredict <= ($signed(rs_v1[i]) < $signed(rs_v2[i])); end // BLT
+                        6'd8: begin cdb_val <= 0; cdb_target_pc <= ($signed(rs_v1[i]) >= $signed(rs_v2[i])) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_mispredict <= ($signed(rs_v1[i]) >= $signed(rs_v2[i])); end // BGE
+                        6'd9: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] < rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_mispredict <= (rs_v1[i] < rs_v2[i]); end // BLTU
+                        6'd10: begin cdb_val <= 0; cdb_target_pc <= (rs_v1[i] >= rs_v2[i]) ? rs_pc[i] + rs_imm[i] : rs_pc[i] + (rs_is_rv32c[i] ? 2 : 4); cdb_mispredict <= (rs_v1[i] >= rs_v2[i]); end // BGEU
                         6'd19: cdb_val <= rs_v1[i] + rs_imm[i]; // ADDI
                         6'd20: cdb_val <= ($signed(rs_v1[i]) < $signed(rs_imm[i])) ? 1 : 0; // SLTI
                         6'd21: cdb_val <= (rs_v1[i] < rs_imm[i]) ? 1 : 0; // SLTIU
